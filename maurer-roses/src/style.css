@@ -94,3 +94,26 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+
+/* Style for the sliders container */
+.sliders-container {
+  display: flex;
+  flex-direction: column;
+  position: absolute;
+  top: 25px;
+  left: 100px;
+  color: white;
+  gap: 10px;
+}
+
+/* Style for each individual slider container */
+.slider-container {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* Style for the sliders */
+.slider-container input[type="range"] {
+  width: 150px;
+}
