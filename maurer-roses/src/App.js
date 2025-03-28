@@ -39,9 +39,11 @@ export default class App extends BaseApp {
       this.slidersContainer,
       (label, value) => {
         this[label] = value;
+        this.nValueDisplay.textContent = ` ${value}`;
         this.draw();
       }
     );
+
     this.dSlider = createSlider(
       "d",
       1,
@@ -51,21 +53,25 @@ export default class App extends BaseApp {
       this.slidersContainer,
       (label, value) => {
         this[label] = value;
+        this.dValueDisplay.textContent = ` ${value}`;
         this.draw();
       }
     );
-    // this.progressSlider = createSlider(
-    //   "Progression",
-    //   0,
-    //   360,
-    //   this.progress,
-    //   1,
-    //   this.slidersContainer,
-    //   (label, value) => {
-    //     this[label] = value;
-    //     this.draw();
-    //   }
-    // );
+
+    // Ajout d'un élément span pour afficher la valeur des sliders
+    this.nValueDisplay = document.createElement("span");
+    this.nValueDisplay.textContent = ` ${this.n}`;
+    this.nSlider.parentNode.insertBefore(
+      this.nValueDisplay,
+      this.nSlider.nextSibling
+    );
+
+    this.dValueDisplay = document.createElement("span");
+    this.dValueDisplay.textContent = ` ${this.d}`;
+    this.dSlider.parentNode.insertBefore(
+      this.dValueDisplay,
+      this.dSlider.nextSibling
+    );
   }
 
   draw() {
