@@ -54,18 +54,18 @@ export default class App extends BaseApp {
         this.draw();
       }
     );
-    this.progressSlider = createSlider(
-      "Progression",
-      0,
-      360,
-      this.progress,
-      1,
-      this.slidersContainer,
-      (label, value) => {
-        this[label] = value;
-        this.draw();
-      }
-    );
+    // this.progressSlider = createSlider(
+    //   "Progression",
+    //   0,
+    //   360,
+    //   this.progress,
+    //   1,
+    //   this.slidersContainer,
+    //   (label, value) => {
+    //     this[label] = value;
+    //     this.draw();
+    //   }
+    // );
   }
 
   draw() {
