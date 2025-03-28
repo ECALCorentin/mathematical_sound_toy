@@ -1,6 +1,5 @@
 import BaseApp from "./BaseApp";
 import { createSlidersContainer, createSlider } from "./Sliders.js";
-import PresetManager from "./PresetManager.js"; // Import du gestionnaire de presets
 
 export default class App extends BaseApp {
   constructor() {
@@ -10,16 +9,17 @@ export default class App extends BaseApp {
     this.ctx = this.canvas.getContext("2d");
     this.width = this.canvas.width = window.innerWidth;
     this.height = this.canvas.height = window.innerHeight;
-    this.presetManager = new PresetManager();
 
-    const savedPreset = this.presetManager.loadPreset("default") || {};
-    this.n = savedPreset.n ?? 2;
-    this.d = savedPreset.d ?? 29;
-    this.progress = savedPreset.progress ?? 360;
+    // Charger les presets sauvegardés à partir du localStorage
+    const savedPreset = this.loadSavedValues();
+    this.n = savedPreset ? savedPreset.n : 2;
+    this.d = savedPreset ? savedPreset.d : 29;
+    this.progress = savedPreset ? savedPreset.progress : 360;
 
     this.slidersContainer = createSlidersContainer();
     this.createSliders();
-    this.createPresetControls();
+    this.createSaveButton();
+    this.displaySavedValues(); // Afficher les valeurs si elles existent déjà
     this.draw();
   }
 
@@ -63,6 +63,7 @@ export default class App extends BaseApp {
       }
     );
 
+    // Créer des éléments d'affichage des valeurs sous les sliders
     this.nValueDisplay = document.createElement("span");
     this.nValueDisplay.textContent = ` ${this.n}`;
     this.nSlider.parentNode.insertBefore(
@@ -78,55 +79,55 @@ export default class App extends BaseApp {
     );
   }
 
-  createPresetControls() {
-    const presetContainer = document.createElement("div");
-    presetContainer.style.marginTop = "10px";
-
-    [1, 2, 3, 4].forEach((presetNum) => {
-      const button = document.createElement("button");
-      button.textContent = `Preset ${presetNum}`;
-      button.style.margin = "5px";
-      button.addEventListener("click", () => this.loadPreset(presetNum));
-      presetContainer.appendChild(button);
-    });
-
+  createSaveButton() {
     const saveButton = document.createElement("button");
     saveButton.textContent = "Sauvegarder";
     saveButton.style.margin = "5px";
-    saveButton.addEventListener("click", () => this.savePreset("default"));
-    presetContainer.appendChild(saveButton);
-
-    document.body.appendChild(presetContainer);
+    saveButton.addEventListener("click", () => this.saveValues());
+    document.body.appendChild(saveButton);
   }
 
-  savePreset(name) {
-    this.presetManager.savePreset(name, {
+  saveValues() {
+    // Sauvegarder les valeurs dans localStorage
+    const preset = {
       n: this.n,
       d: this.d,
       progress: this.progress,
-    });
+    };
+
+    // Sauvegarder sous un nom 'savedPreset' dans localStorage
+    localStorage.setItem("savedPreset", JSON.stringify(preset));
+
+    // Afficher les valeurs sous les sliders
+    this.displaySavedValues();
   }
 
-  loadPreset(name) {
-    if (!preset.n || !preset.d || !preset.progress) {
-      console.warn(
-        "Preset corrompu ou incomplet, utilisation des valeurs par défaut."
-      );
-      preset = { n: 2, d: 29, progress: 360 };
-    }
+  loadSavedValues() {
+    // Charger les valeurs depuis localStorage
+    const savedPreset = localStorage.getItem("savedPreset");
+    return savedPreset ? JSON.parse(savedPreset) : null;
+  }
 
-    const preset = this.presetManager.loadPreset(name);
-    if (preset) {
-      this.n = preset.n;
-      this.d = preset.d;
-      this.progress = preset.progress;
+  displaySavedValues() {
+    const savedPreset = this.loadSavedValues();
 
-      this.nSlider.value = this.n;
-      this.dSlider.value = this.d;
-      this.nValueDisplay.textContent = ` ${this.n}`;
-      this.dValueDisplay.textContent = ` ${this.d}`;
+    if (savedPreset) {
+      const savedValuesContainer = document.createElement("div");
+      savedValuesContainer.style.marginTop = "10px";
 
-      this.draw();
+      const nValue = document.createElement("p");
+      nValue.textContent = `${savedPreset.n}`;
+      savedValuesContainer.appendChild(nValue);
+
+      const dValue = document.createElement("p");
+      dValue.textContent = `${savedPreset.d}`;
+      savedValuesContainer.appendChild(dValue);
+
+      const progressValue = document.createElement("p");
+      progressValue.textContent = `${savedPreset.progress}`;
+      savedValuesContainer.appendChild(progressValue);
+
+      document.body.appendChild(savedValuesContainer);
     }
   }
 

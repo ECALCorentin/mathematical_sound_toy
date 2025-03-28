@@ -117,3 +117,10 @@ button:focus-visible {
 .slider-container input[type="range"] {
   width: 150px;
 }
+
+.preset-container {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  left: 100px;
+}
