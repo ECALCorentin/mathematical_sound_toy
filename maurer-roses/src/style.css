@@ -124,3 +124,15 @@ button:focus-visible {
   flex-direction: column;
   left: 100px;
 }
+
+button {
+  position: absolute;
+  left: 100px;
+}
+
+.saved-values-container {
+  position: relative;
+  left: -2020px;
+  top: -350px;
+  padding-right: 10px;
+}

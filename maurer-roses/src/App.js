@@ -113,6 +113,7 @@ export default class App extends BaseApp {
 
     if (savedPreset) {
       const savedValuesContainer = document.createElement("div");
+      savedValuesContainer.classList.add("saved-values-container");
       savedValuesContainer.style.marginTop = "10px";
 
       const nValue = document.createElement("p");
