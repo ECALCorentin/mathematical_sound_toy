@@ -1,4 +1,4 @@
-import BaseApp from "./BaseApp";
+import BaseApp from "./BaseApp.js";
 import { createSlidersContainer, createSlider } from "./Sliders.js";
 
 export default class App extends BaseApp {
@@ -19,7 +19,10 @@ export default class App extends BaseApp {
     this.createSliders();
     this.createSaveButton();
     this.displaySavedValues();
+
+    this.playerProgress = 0;
     this.draw();
+    this.animatePlayer();
   }
 
   init() {
@@ -147,7 +150,7 @@ export default class App extends BaseApp {
       let y = r * Math.sin(k);
       blackPoints.push({ x, y });
 
-      ctx.strokeStyle = `grey`;
+      ctx.strokeStyle = `black`;
       if (i > 0) {
         ctx.beginPath();
         ctx.moveTo(
@@ -159,9 +162,9 @@ export default class App extends BaseApp {
       }
     }
 
-    // --- Courbe bleue
-    ctx.strokeStyle = "transparent";
-    ctx.lineWidth = 5;
+    // --- Courbe bleue (verte en couleur)
+    ctx.strokeStyle = "#FF0000";
+    ctx.lineWidth = 1.5;
     for (let i = 0; i <= maxProgress; i += step) {
       let k = i * (Math.PI / 180);
       let r = 500 * Math.sin(this.n * k);
@@ -178,8 +181,8 @@ export default class App extends BaseApp {
     }
     ctx.stroke();
 
-    // --- Détection réelle des intersections entre segments
-    ctx.fillStyle = "#FF0000";
+    // --- Détection des intersections
+    ctx.fillStyle = "transparent";
 
     for (let i = 0; i < blackPoints.length - 1; i++) {
       const p1 = blackPoints[i];
@@ -195,8 +198,8 @@ export default class App extends BaseApp {
           const dy = intersection.y;
           const distance = Math.sqrt(dx * dx + dy * dy);
 
-          const maxRadius = 8;
-          const minRadius = 3;
+          const maxRadius = 10;
+          const minRadius = 1;
           const radius = maxRadius - (distance / 500) * (maxRadius - minRadius);
           const clampedRadius = Math.max(
             minRadius,
@@ -216,13 +219,68 @@ export default class App extends BaseApp {
       }
     }
 
+    // --- Player musical animé sur la courbe bleue
+    const playerIndex = this.playerProgress;
+    const playerPoint = bluePoints[playerIndex];
+
+    if (playerPoint) {
+      const before = bluePoints[Math.max(0, playerIndex - 5)];
+      const after =
+        bluePoints[Math.min(bluePoints.length - 1, playerIndex + 5)];
+
+      // Point mobile
+      ctx.fillStyle = "#FF0000";
+      ctx.beginPath();
+      ctx.arc(playerPoint.x, playerPoint.y, 8, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Lignes de connexion
+      ctx.strokeStyle = "transparent";
+      ctx.lineWidth = 1.5;
+
+      if (before) {
+        ctx.beginPath();
+        ctx.moveTo(playerPoint.x, playerPoint.y);
+        ctx.lineTo(before.x, before.y);
+        ctx.stroke();
+      }
+
+      if (after) {
+        ctx.beginPath();
+        ctx.moveTo(playerPoint.x, playerPoint.y);
+        ctx.lineTo(after.x, after.y);
+        ctx.stroke();
+      }
+    }
+
     ctx.restore();
   }
 
-  // --- Méthode utilitaire : intersection entre deux segments
+  animatePlayer() {
+    const maxProgress = Math.min(360, this.progress);
+    const step = 2;
+    const totalSteps = maxProgress / step;
+
+    if (!this.frameCounter) this.frameCounter = 0;
+    this.frameCounter++;
+
+    const speed = 0.2;
+    if (this.frameCounter >= 1 / speed) {
+      this.playerProgress += 1;
+      this.frameCounter = 0;
+    }
+
+    if (this.playerProgress >= totalSteps) {
+      this.playerProgress = 0;
+    }
+
+    this.draw();
+    requestAnimationFrame(() => this.animatePlayer());
+  }
+
   getLineIntersection(p1, p2, q1, q2) {
     const det = (p2.x - p1.x) * (q2.y - q1.y) - (p2.y - p1.y) * (q2.x - q1.x);
-    if (det === 0) return null; // parallèles
+    if (det === 0) return null;
 
     const t =
       ((q1.x - p1.x) * (q2.y - q1.y) - (q1.y - p1.y) * (q2.x - q1.x)) / det;
