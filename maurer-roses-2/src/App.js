@@ -18,9 +18,14 @@ export default class App extends BaseApp {
     this.slidersContainer = createSlidersContainer();
     this.createSliders();
     this.createSaveButton();
+    this.createSoundToggleButton();
     this.displaySavedValues();
 
     this.playerProgress = 0;
+    this.soundEnabled = false;
+    this.lastTrigger = null;
+    this.initAudio();
+
     this.draw();
     this.animatePlayer();
   }
@@ -88,6 +93,21 @@ export default class App extends BaseApp {
     document.body.appendChild(saveButton);
   }
 
+  createSoundToggleButton() {
+    const button = document.createElement("button");
+    button.textContent = "Activer le son";
+    button.style.margin = "5px";
+    button.addEventListener("click", () => {
+      this.soundEnabled = !this.soundEnabled;
+      button.textContent = this.soundEnabled
+        ? "Désactiver le son"
+        : "Activer le son";
+      // Nécessaire pour activer l'audio sur certains navigateurs
+      this.audioCtx.resume();
+    });
+    document.body.appendChild(button);
+  }
+
   saveValues() {
     const preset = {
       n: this.n,
@@ -127,6 +147,48 @@ export default class App extends BaseApp {
     }
   }
 
+  initAudio() {
+    this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    this.audioBuffer = null;
+
+    fetch("/sounds/frequency2.mp3")
+      .then((response) => response.arrayBuffer())
+      .then((arrayBuffer) => this.audioCtx.decodeAudioData(arrayBuffer))
+      .then((audioBuffer) => {
+        this.audioBuffer = audioBuffer;
+        console.log("Audio MP3 prêt !");
+      })
+      .catch((error) => {
+        console.error("Erreur lors du chargement du fichier audio :", error);
+      });
+  }
+
+  playSound(distance) {
+    if (!this.soundEnabled || !this.audioBuffer) {
+      console.log("Son désactivé ou audio non chargé");
+      return;
+    }
+
+    const source = this.audioCtx.createBufferSource();
+    source.buffer = this.audioBuffer;
+
+    const gain = this.audioCtx.createGain();
+
+    const maxDist = 100;
+    const minVolume = 1;
+    const maxVolume = 5;
+    const volume = Math.max(
+      minVolume,
+      maxVolume - (distance / maxDist) * (maxVolume - minVolume)
+    );
+
+    gain.gain.setValueAtTime(volume, this.audioCtx.currentTime);
+
+    source.connect(gain);
+    gain.connect(this.audioCtx.destination);
+    source.start(0);
+  }
+
   draw() {
     const ctx = this.ctx;
     ctx.clearRect(0, 0, this.width, this.height);
@@ -141,8 +203,9 @@ export default class App extends BaseApp {
 
     const blackPoints = [];
     const bluePoints = [];
+    this.intersections = [];
 
-    // --- Courbe noire colorée (arc-en-ciel)
+    // Courbe noire
     for (let i = 0; i <= maxProgress; i += step) {
       let k = i * (Math.PI / 180) * this.d;
       let r = 500 * Math.sin(this.n * k);
@@ -162,8 +225,8 @@ export default class App extends BaseApp {
       }
     }
 
-    // --- Courbe bleue (verte en couleur)
-    ctx.strokeStyle = "#FF0000";
+    // Courbe bleue
+    ctx.strokeStyle = "trasparent";
     ctx.lineWidth = 1.5;
     for (let i = 0; i <= maxProgress; i += step) {
       let k = i * (Math.PI / 180);
@@ -181,25 +244,22 @@ export default class App extends BaseApp {
     }
     ctx.stroke();
 
-    // --- Détection des intersections
-    ctx.fillStyle = "transparent";
-
+    // Intersections
+    ctx.fillStyle = "blue";
     for (let i = 0; i < blackPoints.length - 1; i++) {
       const p1 = blackPoints[i];
       const p2 = blackPoints[i + 1];
-
       for (let j = 0; j < bluePoints.length - 1; j++) {
         const q1 = bluePoints[j];
         const q2 = bluePoints[j + 1];
-
         const intersection = this.getLineIntersection(p1, p2, q1, q2);
         if (intersection) {
+          this.intersections.push(intersection);
           const dx = intersection.x;
           const dy = intersection.y;
           const distance = Math.sqrt(dx * dx + dy * dy);
-
-          const maxRadius = 10;
-          const minRadius = 1;
+          const maxRadius = 4;
+          const minRadius = 4;
           const radius = maxRadius - (distance / 500) * (maxRadius - minRadius);
           const clampedRadius = Math.max(
             minRadius,
@@ -219,7 +279,7 @@ export default class App extends BaseApp {
       }
     }
 
-    // --- Player musical animé sur la courbe bleue
+    // Player
     const playerIndex = this.playerProgress;
     const playerPoint = bluePoints[playerIndex];
 
@@ -228,13 +288,11 @@ export default class App extends BaseApp {
       const after =
         bluePoints[Math.min(bluePoints.length - 1, playerIndex + 5)];
 
-      // Point mobile
-      ctx.fillStyle = "#FF0000";
+      ctx.fillStyle = "blue";
       ctx.beginPath();
       ctx.arc(playerPoint.x, playerPoint.y, 8, 0, Math.PI * 2);
       ctx.fill();
 
-      // Lignes de connexion
       ctx.strokeStyle = "transparent";
       ctx.lineWidth = 1.5;
 
@@ -258,13 +316,13 @@ export default class App extends BaseApp {
 
   animatePlayer() {
     const maxProgress = Math.min(360, this.progress);
-    const step = 2;
+    const step = 1;
     const totalSteps = maxProgress / step;
 
     if (!this.frameCounter) this.frameCounter = 0;
     this.frameCounter++;
 
-    const speed = 0.2;
+    const speed = 0.08;
     if (this.frameCounter >= 1 / speed) {
       this.playerProgress += 1;
       this.frameCounter = 0;
@@ -274,8 +332,34 @@ export default class App extends BaseApp {
       this.playerProgress = 0;
     }
 
+    const playerIndex = this.playerProgress;
+    const maxStep = Math.floor(this.progress / step);
+    if (playerIndex < maxStep) {
+      const k = playerIndex * step * (Math.PI / 180);
+      const r = 500 * Math.sin(this.n * k);
+      const x = r * Math.cos(k);
+      const y = r * Math.sin(k);
+      this.checkIntersectionProximity({ x, y });
+    }
+
     this.draw();
     requestAnimationFrame(() => this.animatePlayer());
+  }
+
+  checkIntersectionProximity(playerPoint) {
+    const threshold = 10;
+    for (const point of this.intersections) {
+      const dx = point.x - playerPoint.x;
+      const dy = point.y - playerPoint.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < threshold) {
+        if (!this.lastTrigger || Date.now() - this.lastTrigger > 100) {
+          this.lastTrigger = Date.now();
+          this.playSound(dist);
+        }
+        break;
+      }
+    }
   }
 
   getLineIntersection(p1, p2, q1, q2) {
