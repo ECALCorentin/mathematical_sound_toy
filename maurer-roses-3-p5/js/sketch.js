@@ -19,10 +19,8 @@ let lastTouchY = 0;
 let lastN = params.n;
 let lastD = params.d;
 let locked = false;
-// let primaryColor = [0, 0, 0];
-// let secondaryColor = [255, 255, 255];
-let primaryColor = [255, 255, 255];
-let secondaryColor = [0, 0, 0];
+let primaryColor = [255, 230, 120];     // Jaune pâle
+let secondaryColor = [0, 0, 0];         // Noir
 let glitchPulse = 0;
 let glitchDuration = 200;
 let glitchSizes = [];
@@ -31,18 +29,22 @@ let axisHighlightUntil = 0;
 
 function preload() {
     for (let filename of soundFiles) {
-        let sound = loadSound('sound/' + filename, () => {
-            console.log(filename + ' loaded');
-        }, (err) => {
-            console.error('Error loading', filename, err);
-        });
+        for (let i = 0; i < 3; i++) { // 3 instances de chaque son
+            let sound = loadSound('sound/' + filename, () => {
+                console.log(filename + ' loaded');
+            }, (err) => {
+                console.error('Error loading', filename, err);
+            });
 
-        if (filename.startsWith('tic_')) {
-            sound.setVolume(3.0);
-            ticSounds.push(sound);
-        } else if (filename.startsWith('glitch_')) {
-            sound.setVolume(1);
-            glitchSounds.push(sound);
+            if (filename.startsWith('tic_')) {
+                sound.setVolume(3.0);
+                sound.playMode('sustain');
+                ticSounds.push(sound);
+            } else if (filename.startsWith('glitch_')) {
+                sound.setVolume(1);
+                sound.playMode('sustain');
+                glitchSounds.push(sound);
+            }
         }
     }
 
@@ -95,8 +97,8 @@ function drawAxes() {
     push();
 
     let highlight = millis() < axisHighlightUntil;
-    let roseCol = color(255, 80, 180);
-    stroke(highlight ? color(0, 180, 255) : roseCol);
+    let roseCol = color(255, 90, 0);        // Orange vif
+    stroke(highlight ? color(0, 200, 255) : roseCol);
     strokeWeight(1.5);
 
     line(-width / 2, 0, width / 2, 0);
@@ -151,33 +153,9 @@ function updateCurves() {
     }
 }
 
-function drawBackgroundBlob() {
-    // Tâche flottante animée
-    push();
-    translate(width / 2, height / 2);
-    let t = millis() * 0.0003;
-    let baseRadius = roseRadius * 1.2 + 40 * sin(t * 2);
-    let blobPoints = 18;
-    noStroke();
-    for (let i = 5; i > 0; i--) {
-        let alpha = 30 * i;
-        fill(120, 180, 255, alpha);
-        beginShape();
-        for (let a = 0; a < TWO_PI; a += TWO_PI / blobPoints) {
-            let r = baseRadius + 30 * sin(a * 3 + t * 2 + i);
-            let x = r * cos(a + t * 0.7 + i * 0.1);
-            let y = r * sin(a + t * 0.7 + i * 0.1);
-            vertex(x, y);
-        }
-        endShape(CLOSE);
-    }
-    pop();
-}
-
 function draw() {
     // --- FOND ANIMÉ ---
-    background(secondaryColor);
-    drawBackgroundBlob();
+    background(secondaryColor);      // <-- Doit être AVANT drawBackgroundBlob()
 
     updateParamsFromMouse();
 
@@ -231,7 +209,7 @@ function draw() {
 
     // --- GLOW ROSE DE BASE ---
     for (let g = 8; g > 0; g--) {
-        stroke(120, 180, 255, 10 + 10 * g);
+        stroke(255, 90, 0, 10 + 10 * g);    // Glow orange
         strokeWeight(16 - g * 2);
         noFill();
         beginShape();
@@ -249,7 +227,7 @@ function draw() {
 
     // --- GLOW MAURER CURVE ---
     for (let g = 6; g > 0; g--) {
-        stroke(255, 80, 180, 10 + 10 * g);
+        stroke(0, 200, 255, 10 + 10 * g);   // Glow bleu cyan
         strokeWeight(10 - g);
         noFill();
         beginShape();
@@ -280,10 +258,10 @@ function draw() {
             baseRadius = 80;
             maxRadius = 220;
             sw = 24;
-            colStroke = color(255, 80, 180, alpha);
-            colFill = color(255, 80, 180, alpha * 0.18);
+            colStroke = color(255, 0, 120, alpha);   // Rose fuchsia
+            colFill = color(255, 0, 120, alpha * 0.18);
             for (let g = 6; g > 0; g--) {
-                stroke(color(255, 80, 180, alpha * 0.07 * g));
+                stroke(color(255, 0, 120, alpha * 0.07 * g));
                 strokeWeight(sw + g * 14);
                 noFill();
                 ellipse(fb.x + fb.offset.x, fb.y + fb.offset.y, map(t, 0, 1, baseRadius, maxRadius) + g * 14);
@@ -293,8 +271,8 @@ function draw() {
             baseRadius = 40;
             maxRadius = 120;
             sw = 8;
-            colStroke = color(0, 180, 255, alpha);
-            colFill = color(0, 180, 255, alpha * 0.35);
+            colStroke = color(255, 230, 120, alpha);   // Jaune pâle
+            colFill = color(255, 230, 120, alpha * 0.35);
         }
 
         let radius = map(t, 0, 1, baseRadius, maxRadius);
@@ -332,12 +310,20 @@ function draw() {
     playheadIndex = (playheadIndex + params.speed) % roseBase.length;
 
     // UI
+
+
+    // Affichage dynamique des paramètres près du curseur
     push();
+    textSize(18); // Plus grand
     fill(primaryColor);
-    noStroke();
-    textSize(14);
+    stroke(0, 120); // Légère ombre pour la lisibilité
+    strokeWeight(4);
     textAlign(LEFT, TOP);
-    text(`n = ${params.n}\nd = ${params.d}`, 10, 10);
+    let info = `n = ${params.n}\nd = ${params.d}`;
+    // Décale pour ne pas cacher le curseur
+    let x = constrain(mouseX + 24, 0, width - 120);
+    let y = constrain(mouseY + 24, 0, height - 80);
+    text(info, x, y);
     pop();
 }
 
@@ -351,9 +337,18 @@ function playNote(inter) {
     // Son tic
     if (ticSounds.length > 0) {
         let s = random(ticSounds);
-        s.rate(1);
-        s.setVolume(3.0);
-        s.play();
+        let sClone = s; // Par défaut, p5.js ne propose pas de clone direct, mais tu peux faire :
+        if (s.buffer) {
+            let newSound = new p5.SoundFile();
+            newSound.buffer = s.buffer;
+            newSound.setVolume(3.0);
+            newSound.rate(1);
+            newSound.play();
+        } else {
+            s.setVolume(3.0);
+            s.rate(1);
+            s.play();
+        }
         axisHighlightUntil = millis() + 150;
 
         if (intersectionCount > 50) {
